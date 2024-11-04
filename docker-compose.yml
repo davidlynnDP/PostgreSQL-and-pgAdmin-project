@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+
+  db:
+    image: postgres:13
+    container_name: postgres_container
+    environment:
+      POSTGRES_USER: myuser      
+      POSTGRES_PASSWORD: mypassword 
+      POSTGRES_DB: mydatabase   
+    ports:
+      - "5432:5432"             
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    # la primera vez que se inicie el contenedor, los scripts en ./init-scripts se ejecutarán automáticamente. Si vuelves a iniciar el contenedor después de eliminar el volumen pgdata, los scripts se volverán a ejecutar, ya que PostgreSQL los ejecuta solo en la inicialización.
+    # los archivos se ejecutan en orden alfabético. Es importante que nombres los archivos de manera que refleje el orden de ejecución deseado, usando prefijos numéricos como 01-, 02-, etc.
+    restart: always
+    healthcheck:
+    # el myuser que aparece en el healthcheck es el mismo usuario que has definido en la sección environment bajo POSTGRES_USER
+      test: ["CMD-SHELL", "pg_isready -U myuser"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:8
+    container_name: pgadmin_container
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    restart: always
+
+volumes:
+  pgdata:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+# postgresql://myuser:mypassword@localhost:5432/mydatabase
+# postgresql://myuser:mypassword@db:5432/mydatabase
